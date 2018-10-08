@@ -21,7 +21,7 @@
     "watch": "npm-run-all --parallel watch:*",
     "cleanse": "node ./scripts/cleanse.js",
     "components": "./bin/components",
-    "lint": "eslint . --fix --cache",
+    "lint": "eslint --fix --cache",
     "lint:staged": "lint-staged",
     "test": "jest .",
     "test:travis": "jest . --runInBand --forceExit",
