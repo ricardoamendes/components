@@ -62,6 +62,9 @@ memory:
   description: The amount (in MiB) of memory used by the task.
 
 inputTypes:
+  provider:
+    type: AwsProvider
+    required: true
   family:
     type: string
     required: true
