@@ -4,8 +4,8 @@ import archiver from 'archiver'
 import { createWriteStream, createReadStream, readFileSync } from 'fs'
 import { forEach, is } from '@serverless/utils'
 
-const createLambda = async (
-  Lambda,
+const createFargate = async (
+  Fargate,
   { functionName, handler, memory, timeout, runtime, environment, description, code, role }
 ) => {
   const params = {
@@ -25,12 +25,12 @@ const createLambda = async (
     }
   }
 
-  const res = await Lambda.createFunction(params).promise()
+  const res = await Fargate.createFunction(params).promise()
   return res.FunctionArn
 }
 
-const updateLambda = async (
-  Lambda,
+const updateFargate = async (
+  Fargate,
   { name, handler, memory, timeout, runtime, environment, description, code, role }
 ) => {
   const functionCodeParams = {
@@ -52,8 +52,8 @@ const updateLambda = async (
     }
   }
 
-  await Lambda.updateFunctionCode(functionCodeParams).promise()
-  const res = await Lambda.updateFunctionConfiguration(functionConfigParams).promise()
+  await Fargate.updateFunctionCode(functionCodeParams).promise()
+  const res = await Fargate.updateFunctionConfiguration(functionConfigParams).promise()
 
   return {
     name,
@@ -67,10 +67,10 @@ const updateLambda = async (
   }
 }
 
-const deleteLambda = async (Lambda, name) => {
+const deleteFargate = async (Fargate, name) => {
   const params = { FunctionName: name }
 
-  await Lambda.deleteFunction(params).promise()
+  await Fargate.deleteFunction(params).promise()
   return {
     name: null,
     handler: null,
@@ -83,7 +83,7 @@ const deleteLambda = async (Lambda, name) => {
   }
 }
 
-const AwsLambdaFunction = {
+const AwsFargateFunction = {
   construct(inputs) {
     this.provider = inputs.provider
     this.functionName = 'v2-demo-hello-10'
@@ -143,7 +143,7 @@ const AwsLambdaFunction = {
         DefaultRole,
         {
           name: `${this.functionName}-execution-role`,
-          service: 'lambda.amazonaws.com',
+          service: 'fargate.amazonaws.com',
           provider: this.provider
         },
         context
@@ -153,33 +153,33 @@ const AwsLambdaFunction = {
   },
   async deploy(prevInstance, context) {
     const AWS = this.provider.getSdk()
-    const Lambda = new AWS.Lambda()
+    const Fargate = new AWS.Fargate()
     await this.pack(context)
 
     if (!prevInstance) {
-      context.log(`Creating Lambda: ${this.functionName}`)
-      this.arn = await createLambda(Lambda, this)
+      context.log(`Creating Fargate: ${this.functionName}`)
+      this.arn = await createFargate(Fargate, this)
     } else if (prevInstance.name && !this.name) {
-      context.log(`Removing Lambda: ${prevInstance.name}`)
-      this.arn = await deleteLambda(Lambda, prevInstance.name)
+      context.log(`Removing Fargate: ${prevInstance.name}`)
+      this.arn = await deleteFargate(Fargate, prevInstance.name)
     } else if (this.name !== prevInstance.name) {
-      context.log(`Removing Lambda: ${prevInstance.name}`)
-      await deleteLambda(Lambda, prevInstance.name)
-      context.log(`Creating Lambda: ${this.name}`)
-      this.arn = await createLambda(Lambda, this)
+      context.log(`Removing Fargate: ${prevInstance.name}`)
+      await deleteFargate(Fargate, prevInstance.name)
+      context.log(`Creating Fargate: ${this.name}`)
+      this.arn = await createFargate(Fargate, this)
     } else {
-      context.log(`Updating Lambda: ${this.name}`)
-      this.arn = await updateLambda(Lambda, this)
+      context.log(`Updating Fargate: ${this.name}`)
+      this.arn = await updateFargate(Fargate, this)
     }
     // await context.saveState({ arn: this.arn })
   },
   async remove(prevInstance, context) {
     if (!prevInstance.name) return this
 
-    context.log(`Removing Lambda: ${prevInstance.name}`)
+    context.log(`Removing Fargate: ${prevInstance.name}`)
 
     try {
-      await deleteLambda(prevInstance.name)
+      await deleteFargate(prevInstance.name)
     } catch (error) {
       if (!error.message.includes('Function not found')) {
         throw new Error(error)
@@ -191,7 +191,7 @@ const AwsLambdaFunction = {
     const AwsEventsRule = await context.loadType('../AwsEventsRule')
     const awsEventsRuleInputs = {
       provider: this.provider,
-      lambdaArn: this.arn,
+      fargateArn: this.arn,
       schedule,
       enabled: true
     }
@@ -200,9 +200,9 @@ const AwsLambdaFunction = {
   getSinkConfig() {
     return {
       uri: this.arn,
-      protocol: 'AwsLambdaFunction'
+      protocol: 'AwsFargateFunction'
     }
   }
 }
 
-export default AwsLambdaFunction
+export default AwsFargateFunction
