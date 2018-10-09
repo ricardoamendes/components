@@ -1,4 +1,6 @@
 import {
+  clone,
+  defineProperty,
   forEach,
   get,
   isFunction,
@@ -7,69 +9,42 @@ import {
   keys,
   last,
   set,
+  assign,
   walkReduceDepthFirst
 } from '@serverless/utils'
 import { SYMBOL_TYPE } from '../constants'
-import isVariable from '../variables/isVariable'
-import { regex } from '../variables/regexVariable'
+import hasVariableString from '../variable/hasVariableString'
+import newVariable from '../variable/newVariable'
 import isTypeConstruct from './isTypeConstruct'
 
-const assign = (target, source) => {
-  forEach((key) => {
-    const descriptor = Object.getOwnPropertyDescriptor(source, key)
-    Object.defineProperty(target, key, descriptor)
-  }, keys(source))
-  return target
-}
-
-const clone = (source) => {
-  const copy = {}
-  forEach((key) => {
-    const descriptor = Object.getOwnPropertyDescriptor(source, key)
-    Object.defineProperty(copy, key, descriptor)
-  }, keys(source))
-  return copy
-}
-
-const resolveProps = (props, data) =>
-  walkReduceDepthFirst(
-    (accum, value, pathParts) => {
-      if (isString(value) && isVariable(value)) {
+const interpretProps = async (props, data, ctx) => {
+  const context = ctx.merge({ root: ctx.Type.root })
+  return walkReduceDepthFirst(
+    async (accum, value, pathParts) => {
+      const interpretedProps = await accum
+      if (isString(value) && hasVariableString(value)) {
         const parentPathParts = init(pathParts)
-        const pathPart = last(pathParts)
-        const parent = get(parentPathParts, accum)
-        const parentCopy = clone(parent)
-        Object.defineProperty(parentCopy, pathPart, {
-          configurable: true,
-          enumerable: true,
-          get() {
-            const propPath = value.match(regex)[1]
-            return value.replace(regex, get(propPath, data))
-          },
-          set(val) {
-            // this[key] = value
-            value = val
-          }
-        })
-        return set(parentPathParts, parentCopy, accum)
+        const lastPathPart = last(pathParts)
+        const parent = get(parentPathParts, interpretedProps)
+        parent[lastPathPart] = newVariable(value, data)
+      } else if (isTypeConstruct(value)) {
+        const parentPathParts = init(pathParts)
+        const lastPathPart = last(pathParts)
+        const parent = get(parentPathParts, interpretedProps)
+        const { type, inputs } = value
+        const Type = await context.loadType(type)
+        parent[lastPathPart] = await context.construct(Type, inputs)
       }
-      return accum
+      return interpretedProps
     },
     props,
     props
   )
+}
 
 const constructTypes = async (props, ctx) => {
-  const context = ctx.merge({ root: ctx.Type.root })
   return walkReduceDepthFirst(
     async (accum, value, pathParts) => {
-      let constructedProps = await accum
-      if (isTypeConstruct(value)) {
-        const { type, inputs } = value
-        const Type = await context.loadType(type)
-        const instance = await context.construct(Type, inputs)
-        constructedProps = set(pathParts, instance, constructedProps)
-      }
       return constructedProps
     },
     props,
@@ -99,23 +74,27 @@ const buildTypeConstructor = (type) => {
 
         // NOTE BRN: variables in inputs should already be resolved outside of the call to this constructor method. There should be no need to resolve them again here.
 
-        // NOTE BRN: properties are first resolved since all the values in props are references to the execution context of the current type
-        let resolvedProps = resolveProps(props, {
-          this: self,
-          self,
-          inputs,
+        // NOTE BRN: properties are first resolved since all the values in props are references to the execution context of the current type. We clone the properties here so that we don't change the base property descriptions from the Type.
+        const selfProps = await interpretProps(
+          clone(props),
+          {
+            this: self,
+            self,
+            inputs,
+            context
+          },
           context
-        })
+        )
 
         // NOTE BRN: This step walks depth first through the properties and creates instances for any property that has both a 'type' and 'inputs' combo. Lower level instances are created first so in case we have nested constructions the higher construction will receive an instance as an input instead of the { type, inputs }
-        resolvedProps = await constructTypes(resolvedProps, context)
+        // selfProps = await constructTypes(selfProps, context)
 
         // NOTE BRN: We set all props onto the instance after they have been resolved. We use the getOwnPropertyDescriptor and defineProperty so that we properly pass getters that may exist in the properties from the property resolution step
-        self = assign(self, resolvedProps)
+        self = Object.assign(self, selfProps)
 
         // NOTE BRN: If a construct method exists, call it now. This gives types one last chance to set values.
-        if (main && isFunction(main.construct)) {
-          await main.construct.call(self, inputs, context)
+        if (isFunction(Type.class.prototype.construct)) {
+          await Type.class.prototype.construct.call(self, inputs, context)
         }
 
         // NOTE BRN: We return self (this) because the constructor is overridden to return a Promise. Therefore the promise must return the reference to the instance.

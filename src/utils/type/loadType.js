@@ -12,7 +12,7 @@ import loadTypeMeta from './loadTypeMeta'
  * @func
  * @param {string} query The query string to identify the type to load
  * @param {Context} context The context object
- * @return {Promise<Type>} The type object that was loaded
+ * @returns {Promise<Type>} The type object that was loaded
  * @example
  *
  *  const Component = await loadType('Component')
@@ -22,7 +22,7 @@ import loadTypeMeta from './loadTypeMeta'
  *  const OtherComponent = await loadType('https://example.com/OtherComponent.zip')
  */
 const loadType = async (query, context) => {
-  const typeMeta = await loadTypeMeta(query, context)
+  const typeMeta = await loadTypeMeta(query.trim(), context)
   return defType(typeMeta, context)
 }
 

@@ -1,9 +1,13 @@
 import AWS from 'aws-sdk'
 
 const AwsProvider = {
-  construct(inputs) {
-    AWS.config.update(inputs)
-    this.sdk = AWS
+  getSdk() {
+    // TODO BRN: This won't work for multi provider/region
+    AWS.config.update({ region: this.region, credentials: this.credentials })
+    return AWS
+  },
+  getCredentials() {
+    return { region: this.region, credentials: this.credentials }
   }
 }
 

@@ -1,19 +1,21 @@
 name: Service
 extends: Component
-version: 1.0.0
 main: ./index.js
 
-providers: ${input.providers}
-compute: ${input.compute}
-functions: ${input.functions}
+providers: ${inputs.providers}
+compute: ${inputs.compute}
+functions: ${inputs.functions}
 
 inputTypes:
   providers:
     type: Object
     default: ${context.providers}
+    required: false
   compute:
     type: Object
     default: ${context.compute}
+    required: false
   functions:
     type: Object
     default: ${context.functions}
+    required: false
