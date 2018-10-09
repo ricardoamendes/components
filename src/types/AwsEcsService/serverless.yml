@@ -81,6 +81,8 @@ schedulingStrategy:
     Note, Fargate tasks do not support the DAEMON scheduling strategy.
 
 inputTypes:
+  provider:
+    type: AwsProvider
   serviceName:
     type: string
     example: myAwsEcsService

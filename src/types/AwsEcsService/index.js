@@ -1,6 +1,4 @@
 import { pick } from 'ramda'
-const aws = require('aws-sdk')
-const ecs = new aws.ECS({ region: process.env.AWS_DEFAULT_REGION || 'us-east-1' })
 
 const inputsProps = [
   'serviceName',
@@ -22,6 +20,8 @@ const inputsProps = [
 
 export default {
   async deploy(prevInstance, context) {
+    const AWS = new this.provider.getSdk()
+    const ecs = AWS.ECS()
     const state = context.getState(this)
     const inputs = pick(inputsProps, this)
     const serviceName = inputs.serviceName || `${context.instanceId}-service`
@@ -54,6 +54,8 @@ export default {
   },
 
   async remove(prevInstance, context) {
+    const AWS = new this.provider.getSdk()
+    const ecs = AWS.ECS()
     const state = context.getState(this)
     if (!state.hasOwnProperty('serviceName')) return {}
 
@@ -108,6 +110,8 @@ export default {
   },
 
   async get(prevInstance, context) {
+    const AWS = new this.provider.getSdk()
+    const ecs = AWS.ECS()
     const state = context.getState(this)
     if (!state.hasOwnProperty('serviceName')) return {}
 
