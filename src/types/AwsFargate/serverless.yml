@@ -1,0 +1,68 @@
+type: aws-fargate
+version: 0.2.0
+core: 0.2.x
+
+description: "Provision AWS ECS Fargate Service with Serverless Components"
+license: Apache-2.0
+author: "Serverless Inc. <hello@serverless.com> (https://serverless.com)"
+repository: "github:serverless/components"
+
+serviceArn:
+  type: string
+  description: The ARN that identifies the service.
+serviceName:
+  type: string
+  description: The name of your service.
+containers:
+  type: array
+  description: "The containers associated with the tasks. Container definition: https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_Container.html"
+attachments:
+  type: array
+  description: "The attachments associated with the tasks. Attachment definition: https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_Attachment.html"
+networkInterfaces:
+  type: array
+  description: "Information about one or more network interfaces attached to the Tasks. Network Interface definition: https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_NetworkInterface.html"
+
+inputTypes:
+  serviceName:
+    type: string
+    description: The name of your service. Up to 255 letters (uppercase and lowercase), numbers, hyphens, and underscores are allowed. Service names must be unique within a cluster, but you can have similarly named services in multiple clusters within a Region or across multiple Regions.
+    required: true
+    example: myAwsEcsFargateService
+  cluster:
+    type: string
+    description: The short name or full Amazon Resource Name (ARN) of the cluster on which to run your service. If you do not specify a cluster, the default cluster is assumed.
+  cpu:
+    type: string
+    enum: [256, 512, 1024, 2048, 4096]
+    description: The number of CPU units used by the task.
+    example: "256"
+  memory:
+    type: string
+    enum: [512, 1024, 2014, 4096, 5120, 6144, 7168, 8192, 9216, 10240, 11264, 12288, 13312, 14336, 15360, 16384, 17408, 18432, 19456, 20480, 21504, 22528, 23552, 24576, 25600, 26624, 27648, 28672, 29696, 30720]
+    description: The amount of memory (in MiB) used by the task.
+    example: "512"
+  containerDefinitions:
+    type: array
+    description: "A list of container definitions that describe the different containers that make up your task. ContainerDefinition definition: https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_ContainerDefinition.html"
+    required: true
+    example:
+    - name: "nginx"
+      essential: true
+      image: nginx:1.7.9
+      portMappings:
+        - containerPort: 80
+          hostPort: 80
+          protocol: tcp
+  desiredCount:
+    type: integer
+    description: The number of instantiations of the specified task definition to place and keep running on your cluster.
+    required: true
+    example: 1
+  exposePublicly:
+    type: boolean
+    description: Whether to assign a public IP address to container instances or not.
+    example: true
+  awsVpcConfiguration:
+    type: object
+    description: "The VPC subnets and security groups associated with a task. AwsVpcConfiguration definition: https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_AwsVpcConfiguration.html"
