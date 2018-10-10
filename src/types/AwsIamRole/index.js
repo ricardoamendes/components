@@ -117,6 +117,7 @@ const AwsIamRole = {
     }
 
     // await context.saveState(this, { arn: this.arn })
+    return this
   },
 
   async remove(prevInstance, context) {
