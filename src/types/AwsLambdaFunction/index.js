@@ -173,6 +173,7 @@ const AwsLambdaFunction = {
       this.arn = await updateLambda(Lambda, this)
     }
     // await context.saveState({ arn: this.arn })
+    return this
   },
   async remove(prevInstance, context) {
     if (!prevInstance.name) return this
